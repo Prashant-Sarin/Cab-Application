@@ -45,7 +45,7 @@ public class GiverActivity extends AppCompatActivity implements View.OnClickList
                 Log.d(TAG,"onAuthStateChanged called");
                 if (user!=null){
                     Log.d(TAG,"user = "+user.getEmail());
-                    Intent giverMap= new Intent(GiverActivity.this,MapActivity.class);
+                    Intent giverMap= new Intent(GiverActivity.this,GiverMapActivity.class);
                     startActivity(giverMap);
                     finish();
                 }
