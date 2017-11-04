@@ -6,6 +6,9 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 
+import com.sarindev.cabapp.giver.GiverLogin;
+import com.sarindev.cabapp.taker.TakerLogin;
+
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     Button btn_giver;
@@ -25,12 +28,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onClick(View view) {
        switch (view.getId()){
            case R.id.btn_giver:
-               Intent giverIntent=new Intent(MainActivity.this,GiverActivity.class);
+               Intent giverIntent=new Intent(MainActivity.this,GiverLogin.class);
                startActivity(giverIntent);
                finish();
                break;
            case R.id.btn_taker:
-               Intent takerIntent=new Intent(MainActivity.this,TakerActivity.class);
+               Intent takerIntent=new Intent(MainActivity.this,TakerLogin.class);
                startActivity(takerIntent);
                finish();
                break;
