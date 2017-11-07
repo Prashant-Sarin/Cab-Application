@@ -17,6 +17,8 @@ import android.widget.Toast;
 
 import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
+import com.firebase.geofire.GeoQuery;
+import com.firebase.geofire.GeoQueryEventListener;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
@@ -35,6 +37,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.sarindev.cabapp.*;
@@ -52,6 +55,9 @@ public class TakerMapActivity extends FragmentActivity implements OnMapReadyCall
     protected static final int REQUEST_CHECK_SETTINGS = 0x1;
     Button logout_btn, callUber_btn;
     LatLng pickUpLocation;
+    private int radius=1;
+    private boolean giverFound = false;
+    private String giverFoundID;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,23 +77,72 @@ public class TakerMapActivity extends FragmentActivity implements OnMapReadyCall
                 Intent intent = new Intent(TakerMapActivity.this, MainActivity.class);
                 startActivity(intent);
                 finish();
-                return;
             }
         });
 
         callUber_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-                DatabaseReference reference = FirebaseDatabase.getInstance().getReference("takerRequest");
-                GeoFire geoFire = new GeoFire(reference);
-                geoFire.setLocation(userId, new GeoLocation(lastLocation.getLatitude(), lastLocation.getLongitude()));
-                pickUpLocation = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
-                mMap.addMarker(new MarkerOptions().position(pickUpLocation).title("Pickup Here"));
-                callUber_btn.setText("Getting a Giver...");
+                if (FirebaseAuth.getInstance()!=null) {
+                    String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+                    DatabaseReference reference = FirebaseDatabase.getInstance().getReference("takerRequest");
+                    GeoFire geoFire = new GeoFire(reference);
+                    geoFire.setLocation(userId, new GeoLocation(lastLocation.getLatitude(), lastLocation.getLongitude()));
+                    pickUpLocation = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
+                    mMap.addMarker(new MarkerOptions().position(pickUpLocation).title("Pickup Here"));
+                    callUber_btn.setText(R.string.Getting_Driver);
+                    //Function to find giver
+                    findClosestGiver();
+                }
             }
         });
 
+    }
+/**
+ * Function to find Giver
+ * */
+    private void findClosestGiver() {
+        DatabaseReference giverLocationReference = FirebaseDatabase.getInstance().getReference().child("GiversAvailable");
+
+        GeoFire geoFire = new GeoFire(giverLocationReference);
+        GeoQuery geoQuery = geoFire.queryAtLocation(new GeoLocation(pickUpLocation.latitude,pickUpLocation.longitude),radius);
+        //To remove all listeners once event has occurred
+        geoQuery.removeAllListeners();
+
+        geoQuery.addGeoQueryEventListener(new GeoQueryEventListener() {
+            @Override
+            public void onKeyEntered(String key, GeoLocation location) {
+                if (!giverFound){
+                    giverFound = true;
+                    giverFoundID = key;
+                    Log.d(TAG,"Giver id = "+giverFoundID);
+                }
+            }
+
+            @Override
+            public void onKeyExited(String key) {
+
+            }
+
+            @Override
+            public void onKeyMoved(String key, GeoLocation location) {
+
+            }
+
+            @Override
+            public void onGeoQueryReady() {
+                if (!giverFound){
+                    radius++;
+                    findClosestGiver();
+                }
+
+            }
+
+            @Override
+            public void onGeoQueryError(DatabaseError error) {
+
+            }
+        });
     }
 
 
@@ -145,9 +200,9 @@ public class TakerMapActivity extends FragmentActivity implements OnMapReadyCall
         LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder().addLocationRequest(mLocationRequest);
         builder.setAlwaysShow(true);
         locationSettingsRequest= builder.build();
-        /**
-         * Check if the device's location settings are adequate for the app's needs using the
-         * {@link com.google.android.gms.location.SettingsApi#checkLocationSettings(GoogleApiClient,
+        /*
+          Check if the device's location settings are adequate for the app's needs using the
+          {@link com.google.android.gms.location.SettingsApi#checkLocationSettings(GoogleApiClient,
          * LocationSettingsRequest)} method, with the results provided through a {@code PendingResult}.
          */
         PendingResult<LocationSettingsResult> result = LocationServices.SettingsApi.checkLocationSettings(mGoogleApiClient,locationSettingsRequest);
@@ -181,7 +236,7 @@ public class TakerMapActivity extends FragmentActivity implements OnMapReadyCall
         super.onStop();
     }
 
-    /**
+     /*
      * The callback invoked when
      * {@link com.google.android.gms.location.SettingsApi#checkLocationSettings(GoogleApiClient,
      * LocationSettingsRequest)} is called. Examines the

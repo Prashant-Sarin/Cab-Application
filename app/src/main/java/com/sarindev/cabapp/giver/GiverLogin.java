@@ -1,7 +1,10 @@
 package com.sarindev.cabapp.giver;
 
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -18,6 +21,8 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.sarindev.cabapp.R;
+import com.sarindev.cabapp.taker.TakerLogin;
+import com.sarindev.cabapp.taker.TakerMapActivity;
 
 public class GiverLogin extends AppCompatActivity implements View.OnClickListener {
 
@@ -30,6 +35,9 @@ public class GiverLogin extends AppCompatActivity implements View.OnClickListene
     private FirebaseAuth mAuth;
     private FirebaseAuth.AuthStateListener authStateListener;
     private FirebaseUser user;
+    boolean isPermissionGranted=false;
+    String[] mLocationPermissions = {android.Manifest.permission.ACCESS_COARSE_LOCATION, android.Manifest.permission.ACCESS_FINE_LOCATION};
+    private static final int LOCATION_PERMISSION_CODE = 121;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,10 +52,13 @@ public class GiverLogin extends AppCompatActivity implements View.OnClickListene
                 user=mAuth.getCurrentUser();
                 Log.d(TAG,"onAuthStateChanged called");
                 if (user!=null){
-                    Log.d(TAG,"user = "+user.getEmail());
-                    Intent giverMap= new Intent(GiverLogin.this,GiverMapActivity.class);
-                    startActivity(giverMap);
-                    finish();
+                    isPermissionGranted = checkLocationPermission();
+                    if (isPermissionGranted) {
+                        Log.d(TAG, "user = " + user.getEmail());
+                        Intent giverMap = new Intent(GiverLogin.this, GiverMapActivity.class);
+                        startActivity(giverMap);
+                        finish();
+                    }
                 }
             }
         };
@@ -60,6 +71,33 @@ public class GiverLogin extends AppCompatActivity implements View.OnClickListene
         btn_giver_Registration.setOnClickListener(this);
 
     }
+
+    protected boolean checkLocationPermission(){
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                requestPermissions(mLocationPermissions,LOCATION_PERMISSION_CODE);
+            }
+            return false;
+        }else {
+            return true;
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch (requestCode){
+            case LOCATION_PERMISSION_CODE: // if permission requested for ACCESS_FINE_LOCATION && ACCESS_COARSE_LOCATION
+                if ((grantResults.length > 0) && (grantResults[0] == PackageManager.PERMISSION_GRANTED) && (grantResults[1]== PackageManager.PERMISSION_GRANTED) ){
+                    Toast.makeText(this,"Permisiions granted",Toast.LENGTH_SHORT).show();
+                    Intent giverMap = new Intent(GiverLogin.this, GiverMapActivity.class);
+                    startActivity(giverMap);
+                    finish();
+                }
+                break;
+        }
+
+    }
+
 
     @Override
     public void onClick(View view) {

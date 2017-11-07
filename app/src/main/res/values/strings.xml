@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">Cab App</string>
     <string name="title_activity_giver_map">Map</string>
+    <string name="Getting_Driver">Getting a Giver...</string>
 </resources>
