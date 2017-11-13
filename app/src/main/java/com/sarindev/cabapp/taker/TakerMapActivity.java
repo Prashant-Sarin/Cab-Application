@@ -35,13 +35,19 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.sarindev.cabapp.*;
 import com.sarindev.cabapp.R;
+
+import java.util.HashMap;
+import java.util.List;
 
 public class TakerMapActivity extends FragmentActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener, ResultCallback<LocationSettingsResult> {
 
@@ -58,6 +64,7 @@ public class TakerMapActivity extends FragmentActivity implements OnMapReadyCall
     private int radius=1;
     private boolean giverFound = false;
     private String giverFoundID;
+    private Marker mGiverMarker;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -116,6 +123,16 @@ public class TakerMapActivity extends FragmentActivity implements OnMapReadyCall
                     giverFound = true;
                     giverFoundID = key;
                     Log.d(TAG,"Giver id = "+giverFoundID);
+
+                    DatabaseReference giverFoundReference = FirebaseDatabase.getInstance().getReference().child("Users").child("Giver").child(giverFoundID);
+                    String takerId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+                    HashMap map =new HashMap();
+                    map.put("TakerRideId",takerId);
+                    giverFoundReference.updateChildren(map);
+
+                    getGiverLocation();
+                    callUber_btn.setText("Looking for Driver Location");
+
                 }
             }
 
@@ -140,6 +157,41 @@ public class TakerMapActivity extends FragmentActivity implements OnMapReadyCall
 
             @Override
             public void onGeoQueryError(DatabaseError error) {
+
+            }
+        });
+    }
+
+    // Function to find Giver Location after getting closest Giver available
+    // Saving giver info in under GiversWorking in firebase
+    private void getGiverLocation() {
+        DatabaseReference giverLocationRef = FirebaseDatabase.getInstance().getReference().child("GiversWorking").child(giverFoundID).child("l");
+        giverLocationRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()){
+                    List<Object> map = (List<Object>) dataSnapshot.getValue();
+                    double locationLat = 0;
+                    double locationLng = 0;
+                    callUber_btn.setText("Giver Found");
+                    if (map.get(0) != null){
+                        locationLat = Double.parseDouble(map.get(0).toString());
+                    }
+                    if (map.get(1) != null){
+                        locationLng = Double.parseDouble(map.get(1).toString());
+                    }
+                    LatLng giverLatLng = new LatLng(locationLat,locationLng);
+
+                    // remove previous marker before adding new one
+                    if (mGiverMarker != null){
+                        mGiverMarker.remove();
+                    }
+                    mGiverMarker = mMap.addMarker(new MarkerOptions().position(giverLatLng).title("Your Giver"));
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
 
             }
         });
